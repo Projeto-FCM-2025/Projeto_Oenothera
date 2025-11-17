@@ -1,0 +1,169 @@
+---
+title: "Dados_2015"
+author: "Felipe Paes"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introdução
+
+Este relatório apresenta uma análise exploratória dos atributos florais da espécie Oenothera ravanii coletados no ano de 2015.
+
+As variáveis no dataset são:
+
+- id: identificador único
+- area: área floral
+- tubo: comprimento do tubo floral
+- nsem: número de sementes
+- germ: taxa de germinação
+
+# Descrição 
+
+Para as possíveis análises dos dados do presente projeto, vamos carregá-los, separadamente, por ano. Nesse sentido, procuramos maior organização e entendimento dos dados acerca dos atributos morfológicos funcionais das flores da espécie Oenothera ravenii em um prazo de 9 anos. Este arquivo, em especial, trabalha medidas estatísticas dos dados relativos ao ano de 2015 (arquivo: "Dados_Oenothera_2015.csv")
+
+# Carregamento dos dados
+
+```{r}
+library(tidyverse) # biblioteca necessária
+
+df <- read.csv("Dados_Oenothera_2015.csv") # cria o df
+
+head(df) # visualiza os primeiros valores do DataFrame
+```
+
+# Verificando se existem dados faltantes
+
+```{r}
+glimpse(df) # geral
+
+colSums(is.na(df)) # contagem de NAs por variável
+```
+
+A variável "germ" possui valores NA, e a variável "nsem" apresenta zeros que representam ausência de atributo. Vamos manter os zeros em "nsem" e substituir os valores NAs de "germ" por 0, que indica não germinação.
+
+
+```{r}
+df_clean <- df %>%
+  mutate(germ = ifelse(is.na(germ), 0, germ)) # troca valores ausentes por 0
+
+colSums(is.na(df_clean))
+```
+
+
+# Estatísticas Descritivas
+
+```{r}
+summary(df_clean) # descrição geral dos dados
+
+df_clean %>% 
+  summarise(
+    media_area = mean(area, na.rm = TRUE),
+    sd_area = sd(area, na.rm = TRUE),
+    media_tubo = mean(tubo, na.rm = TRUE),
+    media_nsem = mean(nsem, na.rm = TRUE),
+    media_germ = mean(germ, na.rm = TRUE)
+  )
+```
+
+# Visualizações
+
+## Distribuição das variáveis
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+Nesta etapa, para a confecção dos gráficos de distribuição das variáveis, os nomes das colunas foram alterados para que os labels fiquem mais claros e informativos: 
+```{r}
+# Renomear variaveis sem acentos
+df_clean_plot <- df_clean %>%
+  rename(
+    Area_mm2 = area,
+    Diametro_tubo_mm = tubo,
+    Numero_sementes = nsem,
+    Germinacao = germ
+  )
+
+df_clean_plot %>%
+  pivot_longer(
+    cols = c(Area_mm2, Diametro_tubo_mm, Numero_sementes, Germinacao),
+    names_to = "Variavel",
+    values_to = "Valor"
+  ) %>%
+  ggplot(aes(x = Valor)) +
+  geom_histogram(
+    bins = 25,
+    fill = "#4C72B0",
+    color = "white",
+    alpha = 0.8
+  ) +
+  facet_wrap(~ Variavel, scales = "free", ncol = 2) +
+  labs(
+    title = "Distribuicao das Variaveis Florais",
+    x = "Valor",
+    y = "Frequencia"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    strip.text = element_text(size = 15, face = "bold"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14)
+  )
+
+```
+
+- A área floral apresenta, de maneira geral, uma distribuição que se aproxima de uma distribuição normal/simétrica. O mesmo ocorre para os valores do diâmetro do tuvo. Entretanto, para a taxa de germinação e o número de sementes, as disrtibuições são fortemente assimétricas à direita.
+
+
+## Relação entre área floral e germinação
+
+Vamos construir um boxplot para visualização das duas variáveis: "Área Floral" e "Germinação"
+
+```{r}
+df_clean %>%
+  mutate(area_cat = ntile(area, 4)) %>%   # divide em quartis
+  ggplot(aes(x = factor(area_cat), y = germ)) +
+  geom_boxplot(fill="#4C72B0", alpha=.6) +
+  labs(
+    x = "Quartil da area floral",
+    y = "Germinacao",
+    title = "Germinacao por Quartis de area Floral"
+  ) +
+  theme_minimal()
+```
+
+- Este gráfico compara a distribuição da variável Germinação (no eixo Y) em função dos Quartis da área floral (no eixo X). Cada caixa representa um quarto das observações, ordenadas pelo tamanho da área floral, desde o menor (Quartil 1) até o maior (Quartil 4). A análise dos boxplots sugere uma relação positiva geral entre o tamanho da área floral e o sucesso de Germinação, já que a mediana atinge seu valor máximo no Quartil 4 (as maiores flores). No entanto, essa relação não é estritamente linear, pois o Quartil 3 (flores de tamanho médio-alto) apresenta uma Germinação mediana inferior à do Quartil 2, indicando que o sucesso reprodutivo pode ser influenciado por fatores adicionais ou ter uma complexidade específica para o grupo de flores no terceiro quartil de área. No entanto, a grande variabilidade sugere que, embora o tamanho da área floral possa ser um fator, ele não é o único determinante do sucesso da germinação, já que mesmo as flores maiores ainda apresentam observações de baixa germinação (valores próximos a 0.00)
+
+
+## Relação entre número de sementes e germinação
+
+Vamos construir um boxplot para visualização das duas variáveis: "Número de Sementes" e "Germinação"
+
+```{r}
+df_clean %>%
+  mutate(quartil_nsem = ntile(nsem, 4)) %>%
+  ggplot(aes(x = factor(quartil_nsem), y = germ)) +
+  geom_boxplot(fill="#4C72B0", alpha=.6) +
+  labs(
+    title = "Germinacao por Quartis do Numero de Sementes",
+    x = "Quartil do numero de sementes",
+    y = "Germinacao"
+  ) +
+  theme_minimal()
+```
+
+- O número de sementes é um forte preditor do sucesso de Germinação. A chance de germinação é praticamente nula no quartil com o menor número de sementes (Q1). A Germinação aumenta drasticamente assim que um número mínimo de sementes é produzido. No entanto, a mediana de Germinação não aumenta linearmente com o aumento do número de sementes: o Quartil 2 apresenta o melhor desempenho mediano, sugerindo que um número ótimo de sementes para maximizar a Germinação pode estar na faixa intermediária, e não necessariamente no maior número absoluto de sementes (Q4).
+
+
+
+
+
+
+
+
