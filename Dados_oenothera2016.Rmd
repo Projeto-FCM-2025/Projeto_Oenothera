@@ -1,0 +1,173 @@
+---
+title: "analise-exploratoria-dos-dados-2016"
+author: "Isabel"
+date: "2025-11-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducao
+
+Este relatorio apresenta uma analise exploratoria dos atributos florais da especie Oenothera ravenii obtidos no ano de 2016.
+
+# As variaveis do conjunto de dados sao:
+
+- id: identificador unico
+- area: area floral  
+- tubo: comprimento do tubo floral
+- nsem: numero de sementes
+
+# Descricao
+
+Para a analise de dados morfologicos e funcionais das flores de
+Oenothera ravenii, referentes a um periodo de nove anos, os arquivos serao carregados separadamente por ano. Este arquivo foca nas medidas estatisticas dos dados relativos ao ano de 2016 (arquivo Dados_Oenothera_2016.csv).
+
+# Carregamento dos dados
+
+```{r}
+library(tidyverse) # biblioteca
+
+df <- read.csv("dadosoenothera2016.csv") # criando o df
+
+head(df) # visualizando os primeiros valores do DataFrame
+```
+# dados faltantes
+
+```{r}
+glimpse(df)
+
+colSums(is.na(df))
+```
+
+Nenhuma variável possui valores NA. A variável "nsem" apresenta zeros que representam ausência de atributo. Os zeros em "nsem" serão mantidos. Para 2016 não foram coletados os dados de germinação.
+
+```{r}
+df_clean <- df
+  
+  colSums(is.na(df_clean))
+```
+```{r}
+summary(df_clean)
+```
+
+```{r}
+dfclean <- df
+```
+
+```{r}
+estatisticas_2016  <- dfclean
+```
+
+```{r}
+estatisticas_2016 <- dfclean %>%
+  summarise(
+media_area = mean(area, na.rm = TRUE),# media - area floral
+sd_area = sd(area, na.rm = TRUE), # desvio padrao
+media_tubo = mean(tubo, na.rm = TRUE), # media - comprimento
+media_nsem = mean(nsem, na.rm = TRUE), # media - n. sementes
+)
+estatisticas_2016
+```
+
+# visualizacao
+
+## destribuicao das variaveis
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+# Renomear variaveis sem acentos
+df_clean_plot <- dfclean %>%
+  rename(
+    Area_mm2 = area,
+    Comprimento_tubo_mm = tubo,
+    Numero_sementes = nsem,
+  )
+```
+
+```{r}
+rm(estatisticas2016)
+``` 
+
+```{r}
+df_clean_plot %>% # converte para o formato longo
+  pivot_longer(
+    cols = c(Area_mm2, Comprimento_tubo_mm, Numero_sementes),
+    names_to = "Variavel",
+    values_to = "Valor"
+  ) %>%
+  ggplot(aes(x = Valor)) + # inicia o grafico
+  geom_histogram(
+    bins = 25,
+    fill = "#4C72B0",
+    color = "white",
+    alpha = 0.8
+  ) +
+  facet_wrap(~ Variavel, scales = "free", ncol = 2) + # um grafico para cada variavel
+  labs(
+    title = "Distribuição das variáveis Florais",
+    x = "Valor",
+    y = "Frequência"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    strip.text = element_text(size = 15, face = "bold"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14)
+  )
+
+```
+
+Para o ano de 2016, o Comprimento do Tubo Floral apresentou a menor dispersão entre os dados. A Área Floral, por sua vez, manteve a ampla dispersão de 2015, apesar de sua distribuição se aproximar da simetria. O Número de Sementes também preservou o mesmo padrão de dispersão observado no ano anterior.
+
+## relacao entre area floral e numero de sementes
+
+Contrucao de um boxplot para visualizacao das variaveis area floral e numero de sementes
+
+```{r}
+dfclean %>%
+  mutate(area = ntile(area, 4)) %>%   # divide em quartis
+  ggplot(aes(x = factor(area), y = nsem)) +
+  geom_boxplot(fill="#4C72B0", alpha=.6) +
+  labs(
+    x = "Quartis do tamanho da área floral",
+    y = "Número de sementes",
+    title = "Número de sementes por quartis de área floral"
+  ) +
+  theme_minimal()
+```
+
+
+
+Este gráfico compara a distribuição da variável Número de sementes (no eixo Y) em função dos Quartis da área floral (no eixo X). 
+A análise dos boxplots sugere uma relação positiva entre o tamanho da área floral e a quantidade de sementes. Porém, não o suficiente para considerar o tamanho da flor um fator limitante para a quantidade de sementes produzidas. Os dados para o ano de 2016 são consistentes com os observados para o ano de 2015; quando foi observado que o tamanho da flor, embora relevante, não é um fator crucial para o sucesso de germinação.
+
+## Relação entre comprimento do tubo floral e número de sementes
+
+Construção de um boxplot para visualização das duas variáveis: "Comprimento do tubo floral" e "Número de sementes"
+
+```{r}
+dfclean %>%
+  mutate(tubo = ntile(tubo, 4)) %>%   # divide em quartis
+  ggplot(aes(x = factor(tubo), y = nsem)) +
+  geom_boxplot(fill="#4C72B0", alpha=.6) +
+  labs(
+    x = "Quartis do comprimento do tubo floral",
+    y = "Número de sementes",
+    title = "Número de sementes por quartis do comprimento do tubo floral"
+  ) +
+  theme_minimal()
+```
+
+
+O comprimento do tubo floral não parece ser um fator limitante para a quantidade de sementes, já que o número de sementes mediano é o mesmo em todos os tamanhos de tubos. 
+Embora tubos curtos (Q1) mostrem maior variação, o potencial de produção de sementes é mantido, independente do comprimento do tubo. 
+Sugerindo que a limitação reprodutiva vem de um fator que não tem a ver nem com o comprimento do tubo, nem com a área da flor. 
