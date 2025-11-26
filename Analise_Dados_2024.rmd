@@ -1,0 +1,215 @@
+---
+title: "Analise_Dados_2024"
+author: "Victor Pap"
+date: "2025-11-26"
+output: html_document
+---
+
+```{r setup_old2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introdução
+
+Este relatório apresenta uma análise exploratória dos atributos florais da espécie *Oenothera ravenii* coletados no ano de 2024.
+
+As variáveis presentes no dataset são:
+
+- **id**: identificador único
+- **area**: área floral
+- **tubo**: comprimento do tubo floral
+- **antera**: altura da antera
+- **estigma**: altura do estigma
+- **nsem**: número de sementes
+
+> **Importante:** o arquivo de 2024 **não possui a variável `germ`**. Por isso, todas as análises envolvendo germinação foram removidas.
+
+# Carregamento dos dados
+
+```{r}
+library(tidyverse)
+
+df <- read.csv("Dados_Oenothera_2024.csv")
+
+head(df)
+```
+
+# Verificação de dados faltantes
+
+```{r}
+glimpse(df)
+colSums(is.na(df))
+```
+
+A variável **nsem** contém zeros, que representam ausência de sementes. Nenhuma variável apresenta valores ausentes.
+
+Como não existe variável de germinação em 2024, nenhuma modificação adicional é necessária.
+
+```{r}
+df_clean <- df
+colSums(is.na(df_clean))
+```
+
+# Estatísticas Descritivas
+
+```{r}
+summary(df_clean)
+
+df_clean %>%
+  summarise(
+    media_area = mean(area, na.rm = TRUE),
+    sd_area = sd(area, na.rm = TRUE),
+    media_tubo = mean(tubo, na.rm = TRUE),
+    sd_tubo = sd(tubo, na.rm = TRUE),
+    media_antera = mean(antera, na.rm = TRUE),
+    media_estigma = mean(estigma, na.rm = TRUE),
+    media_nsem = mean(nsem, na.rm = TRUE),
+    sd_nsem = sd(nsem, na.rm = TRUE)
+  )
+```
+
+# Visualizações
+
+## Distribuição das variáveis
+
+```{r}
+library(ggplot2)
+library(tidyr)
+```
+
+Renomeando variáveis para facilitar a visualização:
+
+```{r}
+df_clean_plot <- df_clean %>%
+  rename(
+    Area_mm2 = area,
+    Comprimento_tubo_mm = tubo,
+    Altura_antera_mm = antera,
+    Altura_estigma_mm = estigma,
+    Numero_sementes = nsem
+  )
+```
+
+Gerando histogramas:
+
+```{r}
+df_clean_plot %>%
+  pivot_longer(
+    cols = c(Area_mm2, Comprimento_tubo_mm, Altura_antera_mm, Altura_estigma_mm, Numero_sementes),
+    names_to = "Variavel",
+    values_to = "Valor"
+  ) %>%
+  ggplot(aes(x = Valor)) +
+  geom_histogram(bins = 25, fill = "#4C72B0", color = "white", alpha = 0.8) +
+  facet_wrap(~ Variavel, scales = "free", ncol = 2) +
+  labs(
+    title = "Distribuição das Variáveis Florais - 2024",
+    x = "Valor",
+    y = "Frequência"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    strip.text = element_text(size = 15, face = "bold")
+  )
+```
+
+# Relação entre área floral e número de sementes
+
+```{r}
+df_clean %>%
+  mutate(area_quartil = ntile(area, 4)) %>%
+  ggplot(aes(x = factor(area_quartil), y = nsem)) +
+  geom_boxplot(fill = "#4C72B0", alpha = .6) +
+  labs(
+    x = "Quartil da Área Floral",
+    y = "Número de Sementes",
+    title = "Número de Sementes por Quartis da Área Floral"
+  ) +
+  theme_minimal()
+```
+
+# Relação entre comprimento do tubo floral e número de sementes
+
+```{r}
+df_clean %>%
+  mutate(tubo_quartil = ntile(tubo, 4)) %>%
+  ggplot(aes(x = factor(tubo_quartil), y = nsem)) +
+  geom_boxplot(fill = "#4C72B0", alpha = .6) +
+  labs(
+    x = "Quartis do Comprimento do Tubo Floral",
+    y = "Número de Sementes",
+    title = "Número de Sementes por Quartis do Comprimento do Tubo Floral"
+  ) +
+  theme_minimal()
+```
+
+# Sugestões de análises adicionais
+
+- Correlação entre **todas as variáveis morfológicas**.
+- PCA (Análise de Componentes Principais) para verificar agrupamentos morfológicos.
+- Regressão linear entre área / tubo / antera / estigma e número de sementes.
+- Identificação de outliers morfológicos com boxplots e métodos estatísticos.
+- Comparação com anos anteriores (2015–2023) quando os datasets estiverem organizados.
+
+
+---
+title: "Análise dos Dados Oenothera 2024"
+author: "Victor Ramos Pap"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+```
+
+## 1. Importação dos Dados
+```{r}
+dados <- read.csv("Dados_Oenothera_2024.csv")
+head(dados)
+```
+
+## 2. Estrutura das Colunas
+```{r}
+str(dados)
+```
+
+## 3. Estatísticas Descritivas
+```{r}
+dados_summary <- summary(dados)
+dados_summary
+```
+
+## 4. Gráfico: Área por ID
+```{r}
+ggplot(dados, aes(x = id, y = area)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Área por ID", x = "ID", y = "Área")
+```
+
+## 5. Gráfico: Número de Sementes (nsem) por ID
+```{r}
+ggplot(dados, aes(x = id, y = nsem)) +
+  geom_col() +
+  theme_minimal() +
+  labs(title = "Número de Sementes por ID", x = "ID", y = "Nº de Sementes")
+```
+
+## 6. Relação entre Área e nº de Sementes
+```{r}
+ggplot(dados, aes(x = area, y = nsem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal() +
+  labs(title = "Relação entre Área e Nº de Sementes")
+```
+
+## 7. Modelo Linear
+```{r}
+modelo <- lm(nsem ~ area, data = dados)
+summary(modelo)
+```
+
